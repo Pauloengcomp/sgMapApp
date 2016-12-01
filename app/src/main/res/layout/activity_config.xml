@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/activity_config"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    tools:context="com.example.denis.sgmapapp.ConfigActivity">
+
+    <TextView
+        android:text="Coordenada em"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_alignStart="@+id/rdGrupoCoord"
+        android:layout_marginTop="29dp"
+        android:id="@+id/textView3"
+        android:textAppearance="@style/TextAppearance.AppCompat.Headline" />
+
+    <RadioGroup
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="62dp"
+        android:id="@+id/rdGrupoCoord"
+        android:layout_centerHorizontal="true"
+        android:layout_alignParentLeft="false"
+        android:layout_centerInParent="false"
+        android:layout_centerVertical="false">
+
+        <RadioButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Grau Decimal"
+            android:id="@+id/rdGrau"
+            android:layout_gravity="left|center_horizontal"
+            android:checked="true" />
+
+        <RadioButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Grau-Minuto Decimal"
+            android:id="@+id/rdGrauMinuto"
+            android:layout_gravity="left|center_horizontal"
+            android:checked="false" />
+
+        <RadioButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Grau-Minuto-Segundo Decimal"
+            android:id="@+id/rdGrauMinutoSegundo"
+            android:layout_gravity="center_horizontal"
+            android:checked="false" />
+
+    </RadioGroup>
+
+    <RadioGroup
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="left|center_horizontal"
+        android:id="@+id/rdGrupoDistancia"
+        android:layout_centerVertical="true"
+        android:layout_alignStart="@+id/rdGrupoCoord">
+
+        <RadioButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Metros"
+            android:id="@+id/rdMetros"
+            android:checked="false" />
+
+        <RadioButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Pés"
+            android:id="@+id/rdPes"
+            android:checked="false" />
+    </RadioGroup>
+
+    <TextView
+        android:text="Distância em"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/textView2"
+        android:textAppearance="@style/TextAppearance.AppCompat.Headline"
+        android:layout_above="@+id/rdGrupoDistancia"
+        android:layout_alignStart="@+id/rdGrupoDistancia"
+        android:layout_marginBottom="6dp" />
+</RelativeLayout>
