@@ -34,6 +34,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 startActivity(i);
                 break;
             case R.id.bt_nav:
+                i=new Intent(this,MapsActivity.class);
+                startActivity(i);
                 break;
             case R.id.bt_credit:
                 i=new Intent(this,CreditosActivity.class);
