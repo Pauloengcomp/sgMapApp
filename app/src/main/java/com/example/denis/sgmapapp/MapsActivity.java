@@ -2,6 +2,7 @@ package com.example.denis.sgmapapp;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
 import android.location.GpsStatus;
 import android.location.Location;
 import android.location.LocationListener;
@@ -19,13 +20,24 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.UiSettings;
+import com.google.android.gms.maps.model.BitmapDescriptor;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.CircleOptions;
+import com.google.android.gms.maps.model.GroundOverlay;
+import com.google.android.gms.maps.model.GroundOverlayOptions;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, LocationListener, GpsStatus.Listener {
 
     private LocationManager locManager;
     private LocationProvider locProvider;
+    private LatLng usuLocal;
+    private MarkerOptions optMarcador = new MarkerOptions();
+    private Marker usuMacador;
+    BitmapDescriptor icon;
+
 
     private GoogleMap mMap;
     //api do google
@@ -52,25 +64,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //sharedpreferences do app
         sp = getSharedPreferences("MyPreferences", Context.MODE_PRIVATE);
 
-        //inicializando api do google
-      /*  mGoogleApiClient = new GoogleApiClient.Builder(this)
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .addApi(LocationServices.API)
-                .build();*/
 
     }
 
 
-    /**
-     * Manipulates the map once available.
-     * This callback is triggered when the map is ready to be used.
-     * This is where we can add markers or lines, add listeners or move the camera. In this case,
-     * we just add a marker near Sydney, Australia.
-     * If Google Play services is not installed on the device, the user will be prompted to install
-     * it inside the SupportMapFragment. This method will only be triggered once the user has
-     * installed Google Play services and returned to the app.
-     */
+
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
@@ -80,18 +78,27 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         // desabilita mapas indoor e 3D
         mMap.setIndoorEnabled(false);
         mMap.setBuildingsEnabled(false);
-        // cria um ponto com as coordenadas do PA7
-        LatLng UnifacsPA7_location = new LatLng(-13.011692, -38.490162);
-        // cria um marcador para o ponto
-        MarkerOptions UnifacsPA7_markerOptions=new MarkerOptions();
-        UnifacsPA7_markerOptions.position(UnifacsPA7_location);
-        UnifacsPA7_markerOptions.title("Unifacs PA7");
-        UnifacsPA7_markerOptions.snippet("Cursos de Engenharia");
+
+       try {
+           // cria um ponto com as ultimas coordenadas
+           usuLocal = new LatLng(locManager.getLastKnownLocation(locProvider.getName()).getLatitude(), locManager.getLastKnownLocation(locProvider.getName()).getLongitude());
+       } catch (SecurityException e) {
+           // e.printStackTrace();
+        }
+
+
+
+        optMarcador.position(usuLocal);
+        optMarcador.title("Olha eu!");
+        optMarcador.snippet("meio perdido...");
         // adiciona marcador ao mapa
-        mMap.addMarker(UnifacsPA7_markerOptions);
+        icon = BitmapDescriptorFactory.fromResource(R.drawable.ic_mapa_nav);
+        optMarcador.icon(icon);
+
+        usuMacador = mMap.addMarker(optMarcador);
 
         // posiciona o ponto de vista (centraliza em um ponto)
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom( UnifacsPA7_location, 15.0f ));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom( usuLocal, 20.0f ));
         // Configura elementos da interface gráfica
         UiSettings mapUI = mMap.getUiSettings();
         // habilita: pan, zoom, tilt, rotate
@@ -100,11 +107,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mapUI.setCompassEnabled(true);
         // habilta contole do zoom
         mapUI.setZoomControlsEnabled(true);
+
     }
 
     @Override
     public void onLocationChanged(Location location) {
         setTxt(location);
+
+        usuLocal = new LatLng(location.getLatitude(),location.getLongitude());
+        usuMacador.setPosition(usuLocal);
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom( usuLocal, 20.0f ));
+        // posiciona o ponto de vista (centraliza em um ponto)
+       // mMap.moveCamera(CameraUpdateFactory.newLatLngZoom( usuLocal, 19.0f ));
     }
 
     @Override
@@ -114,11 +128,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onProviderEnabled(String s) {
-
+        icon = BitmapDescriptorFactory.fromResource(R.drawable.ic_mapa_nav);
+        usuMacador.setIcon(icon);
     }
 
     @Override
     public void onProviderDisabled(String s) {
+
+
+        icon = BitmapDescriptorFactory.fromResource(R.drawable.ic_mapa_semsinal);
+        usuMacador.setIcon(icon);
+
 
     }
 
@@ -169,6 +189,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
+    private void setMarcador(boolean b){
+
+    }
 
 
     @Override
