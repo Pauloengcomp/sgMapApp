@@ -3,6 +3,9 @@ package com.example.denis.sgmapapp;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
+import android.graphics.Point;
+import android.icu.text.RelativeDateTimeFormatter;
+import android.location.GpsSatellite;
 import android.location.GpsStatus;
 import android.location.Location;
 import android.location.LocationListener;
@@ -11,6 +14,9 @@ import android.location.LocationProvider;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 
@@ -18,6 +24,7 @@ import android.widget.TextView;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.Projection;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.UiSettings;
 import com.google.android.gms.maps.model.BitmapDescriptor;
@@ -29,24 +36,35 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
+import java.util.AbstractList;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, LocationListener, GpsStatus.Listener {
 
     private LocationManager locManager;
     private LocationProvider locProvider;
-    private LatLng usuLocal;
+    private LatLng usuLocal=null;
     private MarkerOptions optMarcador = new MarkerOptions();
     private Marker usuMacador;
-    BitmapDescriptor icon;
+
+    private List<Marker> satsMak;
+    private BitmapDescriptor icon;
 
 
     private GoogleMap mMap;
-    //api do google
-   // private GoogleApiClient mGoogleApiClient;
-  //  Location location = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+    private Projection p = null;
+
+    SupportMapFragment sMapa;
 
     private SharedPreferences sp;
+    private SharedPreferences.Editor spEdit;
+    //lat e long padrão unifacs pa7
+    double defLat=-13.011692 , defLong=-38.490162;
     private int grau; // 0 = grau decimal; 1 = grau-minuto decimal; 2 = grau=minuto-segundo
     private int undMedida; // 0 = metro; 1 = pes
+    int h,w;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,9 +74,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+       // sMapa = mapFragment;
+        /*
+        ViewGroup.LayoutParams params = mapFragment.getView().getLayoutParams();
+        h = params.height;
+        w=params.width;*/
 
         locManager = (LocationManager)getSystemService(LOCATION_SERVICE);
         locProvider = locManager.getProvider(LocationManager.GPS_PROVIDER);
+
 
 
         //sharedpreferences do app
@@ -72,6 +96,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
+        p = mMap.getProjection();
 
 // Define tipo do mapa
         mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
@@ -79,15 +104,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.setIndoorEnabled(false);
         mMap.setBuildingsEnabled(false);
 
-       try {
+       /*try {
            // cria um ponto com as ultimas coordenadas
            usuLocal = new LatLng(locManager.getLastKnownLocation(locProvider.getName()).getLatitude(), locManager.getLastKnownLocation(locProvider.getName()).getLongitude());
        } catch (SecurityException e) {
            // e.printStackTrace();
+           usuLocal = new LatLng(-13.011692, -38.490162);
         }
 
+*/
+        if(usuLocal == null){
+            defLat  = Double.valueOf(sp.getString("lat","-13.011692"));
+            defLong = Double.valueOf(sp.getString("log","-38.490162"));
+        }
 
-
+        usuLocal = new LatLng(defLat, defLong);
         optMarcador.position(usuLocal);
         optMarcador.title("Olha eu!");
         optMarcador.snippet("meio perdido...");
@@ -98,7 +129,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         usuMacador = mMap.addMarker(optMarcador);
 
         // posiciona o ponto de vista (centraliza em um ponto)
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom( usuLocal, 20.0f ));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom( usuLocal, 18.0f ));
         // Configura elementos da interface gráfica
         UiSettings mapUI = mMap.getUiSettings();
         // habilita: pan, zoom, tilt, rotate
@@ -114,9 +145,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onLocationChanged(Location location) {
         setTxt(location);
 
+        //salva ultima localização valida
+        spEdit = sp.edit();
+        defLat  = location.getLatitude();
+        defLong = location.getLongitude();
+        spEdit.putString("lat",String.valueOf(defLat));
+        spEdit.putString("log",String.valueOf(defLat));
+        spEdit.commit();
+
         usuLocal = new LatLng(location.getLatitude(),location.getLongitude());
         usuMacador.setPosition(usuLocal);
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom( usuLocal, 20.0f ));
+
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(usuLocal));
         // posiciona o ponto de vista (centraliza em um ponto)
        // mMap.moveCamera(CameraUpdateFactory.newLatLngZoom( usuLocal, 19.0f ));
     }
@@ -187,11 +227,56 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onGpsStatusChanged(int i) {
 
+        GpsStatus gpsStatus;
+        Iterable<GpsSatellite> sats;
+        //  String txtfull = "";
+
+        try {
+            gpsStatus=locManager.getGpsStatus(null);
+            sats=gpsStatus.getSatellites();
+            if(satsMak == null && p != null){
+                for (GpsSatellite sat:sats) {
+
+                    //  Satelites sate = new Satelites(sat.getPrn(),sat.usedInFix(),sat.getSnr(), sat.getAzimuth(), sat.getElevation());
+                    // oSatelites.add(sate);
+                    // para cada passagem no loop, sat é um objeto GpsSatellite
+                    // constante no array sats
+                    // txtfull +=  "PRN:" + String.valueOf(sat.getPrn()) + " FIX:" + sat.usedInFix() + " SNR:" + sat.getSnr() + " Azimuth:" + sat.getAzimuth() + " Elevation:" + sat.getElevation() + "\n";
+
+
+                        Marker m;
+                        MarkerOptions optSatMak = new MarkerOptions();
+
+                        satsMak = new ArrayList<Marker>();
+
+                        Point pp = getGPSCoord(sat.getAzimuth(), sat.getElevation());
+                        LatLng LLp = convPointToLatLng(pp);// p.fromScreenLocation(pp);
+                        // sat.getAzimuth() + " Elevation:" + sat.getElevation()
+
+                        optSatMak.position(LLp);
+
+                        optSatMak.title("PRN: " +String.valueOf(sat.getPrn()));
+                        optSatMak.snippet(" FIX:" + sat.usedInFix());
+
+                    if(sat.usedInFix() == false){
+                        icon = BitmapDescriptorFactory.fromResource(R.drawable.ic_action_sat);
+                    }else{
+                        icon = BitmapDescriptorFactory.fromResource(R.drawable.ic_action_satfix);
+                    }
+                        optSatMak.icon(icon);
+                        m = mMap.addMarker(optSatMak);
+                        satsMak.add(m);
+                        // m = mMap.addMarker(optSatMak);
+                    }
+
+            }
+        } catch (SecurityException e) {
+            // txtfull = "Erro: Sem status dos satelites";
+            // implementar erro caso não retorne o status do gps
+        }
+
     }
 
-    private void setMarcador(boolean b){
-
-    }
 
 
     @Override
@@ -218,6 +303,37 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 e.printStackTrace();
             }
         }
+    }
+
+    private Point getGPSCoord(float az, float elev){
+        int x,y, Xy,Yy;
+        double W,H;
+
+
+     //  View v = (View)findViewById(R.id.activity_creditos);
+        RelativeLayout rel = (RelativeLayout) findViewById(R.id.activity_creditos);
+
+      //  H = v.getLayoutParams().height;/*sMapa.getView()*/
+      //  W= v.getLayoutParams()/*sMapa.getView().getLayoutParams()*/.width;
+        H = rel.getHeight();
+        W = rel.getWidth();
+
+
+        Xy = (int)(W/2 * Math.cos(elev) * Math.sin(az));
+        Yy = (int)(W/2 * Math.cos(elev) * Math.cos(az));
+
+        x = (int)(Xy + W/4); //2
+        y = (int)(- Yy + H/4); //2 no lugar do 4
+
+
+        return new Point(x,y);
+    }
+
+    private LatLng convPointToLatLng(Point p){
+        Double lng = Double.valueOf(p.x / 256 * 360 - 180);
+        Double n = Math.PI - 2 * Math.PI * p.y / 256;
+        Double lat = (180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n))));
+        return new LatLng(lat, lng);
     }
 
 }
