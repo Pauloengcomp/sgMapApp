@@ -5,7 +5,7 @@
     <string name="bt_credit">Créditos</string>
     <string name="bt_sair">Sair</string>
     <string name="credits"><b>Integrantes:</b> Alisson Santana,  Anderson Lorran, Caio Moura, Denisson Fiaes  -   2016.2</string>
-    <string name="InfoCredit">API Level: 19. Android 4.4(KitKat) Alpha Beta Gama 0.01</string>
+    <string name="InfoCredit">API Level: 19. Android 4.4(KitKat) Alpha Beta Gama 0.9</string>
     <string name="bt_config_voltar">Voltar</string>
     <string name="title_activity_maps">Mapa</string>
 </resources>

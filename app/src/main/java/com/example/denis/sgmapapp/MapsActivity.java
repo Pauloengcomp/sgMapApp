@@ -44,28 +44,33 @@ import java.util.List;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, LocationListener, GpsStatus.Listener {
 
+    //Gerenciador de localização
     private LocationManager locManager;
+    //Provedor de localização
     private LocationProvider locProvider;
+    //Localização atual do dispositivo
     private LatLng usuLocal=null;
+    //Opção do marcador do dispositivo
     private MarkerOptions optMarcador = new MarkerOptions();
+    //marcador do dispositivo
     private Marker usuMacador;
-
-    private List<Marker> satsMak = new ArrayList<Marker>();;
+    //Lista de Marker para gerenciamento depois de adicionados ao mapa
+    private List<Marker> satsMak = new ArrayList<Marker>();
+    //icones usados na aplicação
     private BitmapDescriptor icon;
-
-
+    //Mapa do google para pegar o método projection (converte ponto em lnglat)
     private GoogleMap mMap;
-    private Projection p = null;
-
+    //Fragmento do Mapa para pegar o tamanho da tela depois de inicializado
     SupportMapFragment sMapa;
-
+    //Shared preferences
     private SharedPreferences sp;
     private SharedPreferences.Editor spEdit;
     //lat e long padrão unifacs pa7
-    double defLat=-13.011692 , defLong=-38.490162;
+    double defLat, defLong;
+    //variaveis que devem ser definidas na tela config e consultadas pelo shared preferences
     private int grau; // 0 = grau decimal; 1 = grau-minuto decimal; 2 = grau=minuto-segundo
     private int undMedida; // 0 = metro; 1 = pes
-    int h,w;
+    //Teste de botão satelite ativado ou não
     private boolean btnSat = false;
 
     @Override
@@ -76,27 +81,30 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-        sMapa = mapFragment;
-        /*
-        ViewGroup.LayoutParams params = mapFragment.getView().getLayoutParams();
-        h = params.height;
-        w=params.width;*/
 
+        //armazena o fragmento do mapa inicializado em sMapa
+        sMapa = mapFragment;
+
+        //pega o serviço e o provedor de localização
         locManager = (LocationManager)getSystemService(LOCATION_SERVICE);
         locProvider = locManager.getProvider(LocationManager.GPS_PROVIDER);
 
 
 
-        //sharedpreferences do app
+        //pega o sharedpreferences do app
         sp = getSharedPreferences("MyPreferences", Context.MODE_PRIVATE);
 
+        //registra um escutador para o botão do satelite
         Button btSat =(Button) findViewById(R.id.btnSat);
         btSat.setOnClickListener(new View.OnClickListener() {
+
+            //define o escutador
             public void onClick(View v) {
-
+                    // confirma que o evento é do botão satelite
                     Button bt = (Button)findViewById(R.id.btnSat);
+                    //se for de ativado-desativado...
                     if(btnSat){
-
+                        // muda variavel btnSat para false, remove os markes do mapa, limpa a lista de marcadores e muda o texto do botão
                         btnSat = false;
                         for(Marker s:satsMak){
 
@@ -104,11 +112,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         }
                         satsMak.clear();
                         bt.setText("Sat-Off");
-
+                        mMap.setMaxZoomPreference(19.0f);
+                        mMap.setMinZoomPreference(1.0f);
+                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(usuLocal,18.0f));
+                        //se for de desativado-ativado...
                     }else{
-
+                        // muda variavel btnSat para true, chama método que exibe os satelites e muda o texto do botão
+                        mMap.setMaxZoomPreference(15.0f);
+                        mMap.setMinZoomPreference(1.0f);
+                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(usuLocal,1.0f));
                         btnSat = true;
-                        onGpsStatusChanged(1);
+                        plotSats();
                         bt.setText("Sat-On");
 
                     }
@@ -121,36 +135,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-        p = mMap.getProjection();
 
-// Define tipo do mapa
+        // Define tipo do mapa
         mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
         // desabilita mapas indoor e 3D
         mMap.setIndoorEnabled(false);
         mMap.setBuildingsEnabled(false);
 
-       /*try {
-           // cria um ponto com as ultimas coordenadas
-           usuLocal = new LatLng(locManager.getLastKnownLocation(locProvider.getName()).getLatitude(), locManager.getLastKnownLocation(locProvider.getName()).getLongitude());
-       } catch (SecurityException e) {
-           // e.printStackTrace();
-           usuLocal = new LatLng(-13.011692, -38.490162);
-        }
-
-*/
+        // Definir LngLat inicial, pegando a ultima salva no shared preferences
         if(usuLocal == null){
             defLat  = Double.valueOf(sp.getString("lat","-13.011692"));
             defLong = Double.valueOf(sp.getString("log","-38.490162"));
         }
-
         usuLocal = new LatLng(defLat, defLong);
+
+        //setando posição do marcador no mapa
         optMarcador.position(usuLocal);
-        optMarcador.title("Olha eu!");
-        optMarcador.snippet("meio perdido...");
-        // adiciona marcador ao mapa
+        //titulo do marcador
+        optMarcador.title("Local atual");
+        //configura um icone..
         icon = BitmapDescriptorFactory.fromResource(R.drawable.ic_mapa_nav);
         optMarcador.icon(icon);
-
+        // adiciona marcador ao mapa
         usuMacador = mMap.addMarker(optMarcador);
 
         // posiciona o ponto de vista (centraliza em um ponto)
@@ -159,15 +165,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         UiSettings mapUI = mMap.getUiSettings();
         // habilita: pan, zoom, tilt, rotate
         mapUI.setAllGesturesEnabled(true);
+        mapUI.setMapToolbarEnabled(true);
         // habilita norte
         mapUI.setCompassEnabled(true);
-        // habilta contole do zoom
+        // habilta controle do zoom
         mapUI.setZoomControlsEnabled(true);
 
     }
 
     @Override
     public void onLocationChanged(Location location) {
+
+        //chama metodo que define valores da posição no label em cima do mapa
         setTxt(location);
 
         //salva ultima localização valida
@@ -178,12 +187,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         spEdit.putString("log",String.valueOf(defLat));
         spEdit.commit();
 
+        //Salva a ultima atualização de localização na variavel da classe
         usuLocal = new LatLng(location.getLatitude(),location.getLongitude());
+        //atualiza posição do dispositivo no mapa
         usuMacador.setPosition(usuLocal);
-
+        // se o modo satelite estiver desativado...
         if(!btnSat) {
+            //Centraliza o mapa na posição atual caso o modo satelite esteja desativado (facilitar visualização dos mesmos)
             mMap.moveCamera(CameraUpdateFactory.newLatLng(usuLocal));
         }
+
         // posiciona o ponto de vista (centraliza em um ponto)
        // mMap.moveCamera(CameraUpdateFactory.newLatLngZoom( usuLocal, 19.0f ));
     }
@@ -195,6 +208,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onProviderEnabled(String s) {
+
+        //se o gps for ativado trocar o icone do marcador dispositivo
         icon = BitmapDescriptorFactory.fromResource(R.drawable.ic_mapa_nav);
         usuMacador.setIcon(icon);
     }
@@ -202,7 +217,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onProviderDisabled(String s) {
 
-
+        //se o gps for desativado trocar o icone do marcador dispositivo
         icon = BitmapDescriptorFactory.fromResource(R.drawable.ic_mapa_semsinal);
         usuMacador.setIcon(icon);
 
@@ -211,12 +226,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void setTxt(Location location){
 
+        //texto padrão sem valores..
         String tFormat = "Obtendo valores...";
+        //Acha o textview na activity
         TextView txt = (TextView)findViewById(R.id.txtInfo);
-
+        //atribui valores as variaveis da classe atraves do shred preferences (salvos na tela config)
         undMedida = sp.getInt("distancia",0);
         grau = sp.getInt("coordenada",0);
 
+        // escolhe o texto a ser exibido conforme definição na tela config.
         switch (grau) {
             case 0:
                 if(undMedida == 0){
@@ -247,6 +265,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 break;
         }
 
+        //define o texto escolhido no textview
         txt.setText(tFormat);
 
     }
@@ -254,54 +273,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onGpsStatusChanged(int i) {
 
-        plotSats();
-       /* GpsStatus gpsStatus;
-        Iterable<GpsSatellite> sats;
-        //  String txtfull = "";
-
-        try {
-            gpsStatus=locManager.getGpsStatus(null);
-            sats=gpsStatus.getSatellites();
-            if(satsMak == null && p != null){
-                for (GpsSatellite sat:sats) {
-
-                    //  Satelites sate = new Satelites(sat.getPrn(),sat.usedInFix(),sat.getSnr(), sat.getAzimuth(), sat.getElevation());
-                    // oSatelites.add(sate);
-                    // para cada passagem no loop, sat é um objeto GpsSatellite
-                    // constante no array sats
-                    // txtfull +=  "PRN:" + String.valueOf(sat.getPrn()) + " FIX:" + sat.usedInFix() + " SNR:" + sat.getSnr() + " Azimuth:" + sat.getAzimuth() + " Elevation:" + sat.getElevation() + "\n";
-
-
-                        Marker m;
-                        MarkerOptions optSatMak = new MarkerOptions();
-
-                        satsMak = new ArrayList<Marker>();
-
-                        Point pp = getGPSCoord(sat.getAzimuth(), sat.getElevation());
-                        LatLng LLp = convPointToLatLng(pp);// p.fromScreenLocation(pp);
-                        // sat.getAzimuth() + " Elevation:" + sat.getElevation()
-
-                        optSatMak.position(LLp);
-
-                        optSatMak.title("PRN: " +String.valueOf(sat.getPrn()));
-                        optSatMak.snippet(" FIX:" + sat.usedInFix());
-
-                    if(sat.usedInFix() == false){
-                        icon = BitmapDescriptorFactory.fromResource(R.drawable.ic_action_sat);
-                    }else{
-                        icon = BitmapDescriptorFactory.fromResource(R.drawable.ic_action_satfix);
-                    }
-                        optSatMak.icon(icon);
-                        m = mMap.addMarker(optSatMak);
-                        satsMak.add(m);
-                        // m = mMap.addMarker(optSatMak);
-                    }
-
-            }
-        } catch (SecurityException e) {
-            // txtfull = "Erro: Sem status dos satelites";
-            // implementar erro caso não retorne o status do gps
-        }*/
+        //Plotar os satelites a cada atualização
+       // plotSats();
 
     }
 
@@ -310,6 +283,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     protected void onPause() {
         super.onPause();
+        //libera o serviço de localização quando o aplicativo não estiver em uso (deixa de ser um escutador)
         if (locManager.isProviderEnabled(locProvider.getName())) {
             try {
                 locManager.removeUpdates(this);
@@ -323,6 +297,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     protected void onResume() {
         super.onResume();
+        //recupera o serviço de localização e passa a escutar as notificações
         if (locManager.isProviderEnabled(locProvider.getName())) {
             try {
                 locManager.requestLocationUpdates(locProvider.getName(), 30000, 1, this);
@@ -333,28 +308,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
+    // Algoritmo do professor para converter azimuth e elevação em pontos na tela
     private Point getGPSCoord(float az, float elev){
         int x,y, Xy,Yy;
-        double W,H;
+        double W=0,H=0;
 
+        try {
+            //pega o tamanho da tela
+            H = sMapa.getView().getHeight(); 
+            W = sMapa.getView().getWidth();
+        }catch (Exception e){
+            // tratar erro se não conseguir pegar os valores
+        }
 
-        //  View v = (View)findViewById(R.id.activity_creditos);
-        RelativeLayout rel = (RelativeLayout) findViewById(R.id.activity_creditos);
-
-        //  H = v.getLayoutParams().height;/*sMapa.getView()*/
-        //  W= v.getLayoutParams()/*sMapa.getView().getLayoutParams()*/.width;
-        H = sMapa.getView().getHeight();//rel.getHeight();
-        W = sMapa.getView().getWidth(); //rel.getWidth();
-
-
-
+        //define coordenadas  do satelite em semi-esfera
         Xy = (int)(W/2 * Math.cos(elev) * Math.sin(az));
         Yy = (int)(W/2 * Math.cos(elev) * Math.cos(az));
 
-        x = (int)(Xy + W/2); //2
-        y = (int)(- Yy + H/2); //2 no lugar do 4
+        //converte para coordenadas em pixel da tela
+        x = (int)(Xy + W/2);
+        y = (int)(- Yy + H/2);
 
-
+        //retorna o ponto
         return new Point(x,y);
     }
 
@@ -364,32 +339,38 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         try {
 
-            GpsStatus gpsStatus;
+            //cria iterable para os satelites
             Iterable<GpsSatellite> sats;
-
+            //pega os satelites atualizados e coloca no iterable
+            GpsStatus gpsStatus;
             gpsStatus=locManager.getGpsStatus(null);
             sats=gpsStatus.getSatellites();
 
-
+            //confirma se o modo satelite está ativo
             if(btnSat) {
 
-                if (!satsMak.isEmpty()) {
+                // confirma remoção dos markes no mapa e limpa  o arraylist se ele já não estiver limpo
+                if (satsMak.size() > 0) {
 
                     for (Marker s : satsMak) {
 
                         s.remove();
-                    }
-                    satsMak.clear();
 
+                    }
+                   satsMak.clear();
                 }
 
+
+                // faz um for each para tratar e adicionar os satelites um por um no mapa como um marker
                 for (GpsSatellite sat : sats) {
 
+                    //o marker e o options marker que serão adicionados
                     Marker m;
                     MarkerOptions optSatMak = new MarkerOptions();
-
+                    // pega o az e elev do satelite e converte para coordenadas em pixel baseados no tamanho da tela
                     Point pp = getGPSCoord(sat.getAzimuth(), sat.getElevation());
 
+                    // tenta converter as coordenadas em LngLat no map e logo depois  adiciona no mapa
                     try {
                         LatLng LLp = mMap.getProjection().fromScreenLocation(pp);
                         optSatMak.position(LLp);
@@ -397,16 +378,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         //tratamento de erro se não conseguir pegar e converter as coordenadas
                     }
 
+                    //texto do marcador com prn e snr
                     optSatMak.title("PRN: " + String.valueOf(sat.getPrn()) + " SNR: " + String.valueOf(sat.getSnr()));
-                    optSatMak.snippet(" FIX:" + sat.usedInFix());
+                   // optSatMak.snippet(" FIX:" + sat.usedInFix());
 
-                    if (sat.usedInFix() == false) {
+                    //escolhe qual icone usar caso o satelite ser usado como fix
+                    if (!sat.usedInFix()) {
                         icon = BitmapDescriptorFactory.fromResource(R.drawable.ic_action_sat);
                     } else {
                         icon = BitmapDescriptorFactory.fromResource(R.drawable.ic_action_satfix);
                     }
                     optSatMak.icon(icon);
+
+                    //adiciona marcador satelite no mapa
                     m = mMap.addMarker(optSatMak);
+                    //adiciona marcador satelite em uma lista para posteriores tratamentos (como remoção no mapa)
                     satsMak.add(m);
 
                 }
