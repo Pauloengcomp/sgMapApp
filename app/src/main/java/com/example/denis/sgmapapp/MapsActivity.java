@@ -16,6 +16,7 @@ import android.os.Bundle;
 
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
@@ -49,7 +50,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private MarkerOptions optMarcador = new MarkerOptions();
     private Marker usuMacador;
 
-    private List<Marker> satsMak;
+    private List<Marker> satsMak = new ArrayList<Marker>();;
     private BitmapDescriptor icon;
 
 
@@ -65,6 +66,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private int grau; // 0 = grau decimal; 1 = grau-minuto decimal; 2 = grau=minuto-segundo
     private int undMedida; // 0 = metro; 1 = pes
     int h,w;
+    private boolean btnSat = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,7 +76,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-       // sMapa = mapFragment;
+        sMapa = mapFragment;
         /*
         ViewGroup.LayoutParams params = mapFragment.getView().getLayoutParams();
         h = params.height;
@@ -88,7 +90,30 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //sharedpreferences do app
         sp = getSharedPreferences("MyPreferences", Context.MODE_PRIVATE);
 
+        Button btSat =(Button) findViewById(R.id.btnSat);
+        btSat.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
 
+                    Button bt = (Button)findViewById(R.id.btnSat);
+                    if(btnSat){
+
+                        btnSat = false;
+                        for(Marker s:satsMak){
+
+                            s.remove();
+                        }
+                        satsMak.clear();
+                        bt.setText("Sat-Off");
+
+                    }else{
+
+                        btnSat = true;
+                        onGpsStatusChanged(1);
+                        bt.setText("Sat-On");
+
+                    }
+            }
+        });
     }
 
 
@@ -156,7 +181,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         usuLocal = new LatLng(location.getLatitude(),location.getLongitude());
         usuMacador.setPosition(usuLocal);
 
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(usuLocal));
+        if(!btnSat) {
+            mMap.moveCamera(CameraUpdateFactory.newLatLng(usuLocal));
+        }
         // posiciona o ponto de vista (centraliza em um ponto)
        // mMap.moveCamera(CameraUpdateFactory.newLatLngZoom( usuLocal, 19.0f ));
     }
@@ -227,7 +254,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onGpsStatusChanged(int i) {
 
-        GpsStatus gpsStatus;
+        plotSats();
+       /* GpsStatus gpsStatus;
         Iterable<GpsSatellite> sats;
         //  String txtfull = "";
 
@@ -273,7 +301,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         } catch (SecurityException e) {
             // txtfull = "Erro: Sem status dos satelites";
             // implementar erro caso não retorne o status do gps
-        }
+        }*/
 
     }
 
@@ -310,30 +338,87 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         double W,H;
 
 
-     //  View v = (View)findViewById(R.id.activity_creditos);
+        //  View v = (View)findViewById(R.id.activity_creditos);
         RelativeLayout rel = (RelativeLayout) findViewById(R.id.activity_creditos);
 
-      //  H = v.getLayoutParams().height;/*sMapa.getView()*/
-      //  W= v.getLayoutParams()/*sMapa.getView().getLayoutParams()*/.width;
-        H = rel.getHeight();
-        W = rel.getWidth();
+        //  H = v.getLayoutParams().height;/*sMapa.getView()*/
+        //  W= v.getLayoutParams()/*sMapa.getView().getLayoutParams()*/.width;
+        H = sMapa.getView().getHeight();//rel.getHeight();
+        W = sMapa.getView().getWidth(); //rel.getWidth();
+
 
 
         Xy = (int)(W/2 * Math.cos(elev) * Math.sin(az));
         Yy = (int)(W/2 * Math.cos(elev) * Math.cos(az));
 
-        x = (int)(Xy + W/4); //2
-        y = (int)(- Yy + H/4); //2 no lugar do 4
+        x = (int)(Xy + W/2); //2
+        y = (int)(- Yy + H/2); //2 no lugar do 4
 
 
         return new Point(x,y);
     }
 
-    private LatLng convPointToLatLng(Point p){
-        Double lng = Double.valueOf(p.x / 256 * 360 - 180);
-        Double n = Math.PI - 2 * Math.PI * p.y / 256;
-        Double lat = (180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n))));
-        return new LatLng(lat, lng);
+
+    private void plotSats(){
+
+
+        try {
+
+            GpsStatus gpsStatus;
+            Iterable<GpsSatellite> sats;
+
+            gpsStatus=locManager.getGpsStatus(null);
+            sats=gpsStatus.getSatellites();
+
+
+            if(btnSat) {
+
+                if (!satsMak.isEmpty()) {
+
+                    for (Marker s : satsMak) {
+
+                        s.remove();
+                    }
+                    satsMak.clear();
+
+                }
+
+                for (GpsSatellite sat : sats) {
+
+                    Marker m;
+                    MarkerOptions optSatMak = new MarkerOptions();
+
+                    Point pp = getGPSCoord(sat.getAzimuth(), sat.getElevation());
+
+                    try {
+                        LatLng LLp = mMap.getProjection().fromScreenLocation(pp);
+                        optSatMak.position(LLp);
+                    } catch (Exception e) {
+                        //tratamento de erro se não conseguir pegar e converter as coordenadas
+                    }
+
+                    optSatMak.title("PRN: " + String.valueOf(sat.getPrn()) + " SNR: " + String.valueOf(sat.getSnr()));
+                    optSatMak.snippet(" FIX:" + sat.usedInFix());
+
+                    if (sat.usedInFix() == false) {
+                        icon = BitmapDescriptorFactory.fromResource(R.drawable.ic_action_sat);
+                    } else {
+                        icon = BitmapDescriptorFactory.fromResource(R.drawable.ic_action_satfix);
+                    }
+                    optSatMak.icon(icon);
+                    m = mMap.addMarker(optSatMak);
+                    satsMak.add(m);
+
+                }
+
+            }
+
+
+        } catch (SecurityException e) {
+
+            // implementar erro caso não retorne o status do gps
+        }
     }
+
 
 }

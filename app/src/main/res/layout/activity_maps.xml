@@ -32,4 +32,12 @@
         android:textAllCaps="false"
         android:textAlignment="center" />
 
+    <Button
+        android:text="Sat-Off"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/btnSat"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true" />
+
 </RelativeLayout>
