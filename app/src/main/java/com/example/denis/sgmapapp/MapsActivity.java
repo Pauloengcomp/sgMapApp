@@ -315,7 +315,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         try {
             //pega o tamanho da tela
-            H = sMapa.getView().getHeight(); 
+            H = sMapa.getView().getHeight();
             W = sMapa.getView().getWidth();
         }catch (Exception e){
             // tratar erro se não conseguir pegar os valores
