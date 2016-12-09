@@ -89,6 +89,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         locManager = (LocationManager)getSystemService(LOCATION_SERVICE);
         locProvider = locManager.getProvider(LocationManager.GPS_PROVIDER);
 
+        //recupera o serviço de localização e passa a escutar as notificações
+        if (locManager.isProviderEnabled(locProvider.getName())) {
+            try {
+                locManager.requestLocationUpdates(locProvider.getName(), 5000, 1, this);
+                locManager.addGpsStatusListener(this);
+            } catch (SecurityException e) {
+                e.printStackTrace();
+            }
+        }
+
 
 
         //pega o sharedpreferences do app
@@ -300,7 +310,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //recupera o serviço de localização e passa a escutar as notificações
         if (locManager.isProviderEnabled(locProvider.getName())) {
             try {
-                locManager.requestLocationUpdates(locProvider.getName(), 30000, 1, this);
+                locManager.requestLocationUpdates(locProvider.getName(), 5000, 1, this);
                 locManager.addGpsStatusListener(this);
             } catch (SecurityException e) {
                 e.printStackTrace();
@@ -318,7 +328,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             H = sMapa.getView().getHeight();
             W = sMapa.getView().getWidth();
         }catch (Exception e){
-            // tratar erro se não conseguir pegar os valores
+            //|TODO:  tratar erro se não conseguir pegar os valores
         }
 
         //define coordenadas  do satelite em semi-esfera
@@ -375,7 +385,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         LatLng LLp = mMap.getProjection().fromScreenLocation(pp);
                         optSatMak.position(LLp);
                     } catch (Exception e) {
-                        //tratamento de erro se não conseguir pegar e converter as coordenadas
+                        //TODO: tratamento de erro se não conseguir pegar e converter as coordenadas
                     }
 
                     //texto do marcador com prn e snr
@@ -402,7 +412,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         } catch (SecurityException e) {
 
-            // implementar erro caso não retorne o status do gps
+            //TODO:  implementar erro caso não retorne o status do gps
         }
     }
 

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">sgMapApp</string>
+    <string name="app_name">Satellite GPS Finder</string>
     <string name="bt_config">Configuração</string>
     <string name="bt_nav">Navegação</string>
     <string name="bt_credit">Créditos</string>
